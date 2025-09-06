@@ -4,7 +4,7 @@ services:
   markdown-epub-api:
     build: .
     ports:
-      - "8080:5000"
+      - "8088:5000"
     environment:
       - PORT=5000
       - HOST=0.0.0.0
