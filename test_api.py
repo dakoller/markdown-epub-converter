@@ -11,6 +11,8 @@ import os
 import sys
 import subprocess
 import tempfile
+import zipfile
+from io import BytesIO
 
 def test_health_check(base_url):
     """Test the health check endpoint."""
@@ -30,6 +32,61 @@ def test_health_check(base_url):
             return False
     except Exception as e:
         print(f"❌ Error connecting to server: {str(e)}")
+        return False
+
+def verify_epub_structure(epub_file):
+    """Verify that the EPUB file is a valid ZIP archive with the expected structure."""
+    print(f"\n🔍 Verifying EPUB file structure: {epub_file}")
+    
+    if not os.path.exists(epub_file):
+        print(f"❌ EPUB file not found: {epub_file}")
+        return False
+    
+    if os.path.getsize(epub_file) == 0:
+        print(f"❌ EPUB file is empty: {epub_file}")
+        return False
+    
+    try:
+        # Check if the file is a valid ZIP archive
+        with zipfile.ZipFile(epub_file, 'r') as zip_ref:
+            # Get the list of files in the EPUB
+            file_list = zip_ref.namelist()
+            
+            if not file_list:
+                print("❌ EPUB file is empty (no files in ZIP)")
+                return False
+            
+            # Check for required EPUB files
+            required_files = ['mimetype', 'META-INF/container.xml']
+            missing_files = [f for f in required_files if f not in file_list]
+            
+            if missing_files:
+                print(f"❌ EPUB missing required files: {', '.join(missing_files)}")
+                return False
+            
+            # Check mimetype content (should be 'application/epub+zip')
+            try:
+                mimetype = zip_ref.read('mimetype').decode('utf-8').strip()
+                if mimetype != 'application/epub+zip':
+                    print(f"❌ Invalid mimetype: {mimetype}")
+                    return False
+                else:
+                    print("✅ Valid mimetype found")
+            except Exception as e:
+                print(f"❌ Error reading mimetype: {str(e)}")
+                return False
+            
+            # Print summary of files
+            print(f"✅ EPUB contains {len(file_list)} files")
+            print(f"   First 5 files: {', '.join(file_list[:5])}")
+            
+            return True
+            
+    except zipfile.BadZipFile as e:
+        print(f"❌ EPUB file is not a valid ZIP archive: {str(e)}")
+        return False
+    except Exception as e:
+        print(f"❌ Error verifying EPUB structure: {str(e)}")
         return False
 
 def verify_epub_metadata(epub_file, expected_title, expected_author):
@@ -159,6 +216,12 @@ def test_conversion(base_url, markdown_content, title="Test Title", author="Test
             
             if file_size == 0:
                 print("❌ Warning: Output file has zero bytes!")
+                return False
+            
+            # Verify EPUB structure
+            structure_ok = verify_epub_structure(output_file)
+            if not structure_ok:
+                print("❌ Error: EPUB file structure is invalid")
                 return False
             
             # Verify metadata

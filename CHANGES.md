@@ -44,6 +44,20 @@ This document summarizes all the changes made to improve the security of the Doc
 ### 10. Security Labels
 - Added metadata labels to the image for better tracking and identification
 
+## EPUB File Integrity Fixes
+
+### 1. Fixed Corrupted EPUB ZIP Header Issue
+- Added explicit EPUB format and version specification to pandoc command
+- Implemented ZIP structure validation to ensure EPUB files are valid
+- Added file integrity checks before sending the response
+- Improved file handling to prevent truncation or corruption
+
+### 2. Enhanced File Transfer
+- Implemented in-memory file handling to avoid temporary file issues
+- Added proper HTTP headers to prevent caching issues
+- Added multiple verification steps for file integrity
+- Implemented fallback mechanisms for file handling
+
 ## Metadata Handling Improvements
 
 ### 1. Enhanced Title and Author Handling

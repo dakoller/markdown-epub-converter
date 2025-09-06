@@ -86,13 +86,17 @@ publisher: "{os.environ.get('EPUB_PUBLISHER', '')}"
 """)
             logger.debug(f"Created metadata file at {metadata_path}")
             
-            # Build pandoc command with metadata file
+            # Build pandoc command with metadata file and explicit EPUB format
             cmd = [
                 'pandoc',
                 '--standalone',
                 '--metadata-file=' + metadata_path,
                 input_path,
                 '-o', output_path,
+                # Explicitly specify EPUB format
+                '-t', 'epub',
+                # Add EPUB version
+                '--epub-version=3',
                 # Still include direct metadata for backwards compatibility
                 '--metadata', f'title={title}',
                 '--metadata', f'author={author}'
@@ -152,15 +156,61 @@ publisher: "{os.environ.get('EPUB_PUBLISHER', '')}"
             except Exception as e:
                 logger.warning(f"Error verifying metadata: {str(e)}")
             
+            # Verify the EPUB file is a valid ZIP archive
+            logger.info("Verifying EPUB file integrity")
+            try:
+                import zipfile
+                with zipfile.ZipFile(output_path, 'r') as zip_ref:
+                    # Try to get the list of files to verify the ZIP structure
+                    file_list = zip_ref.namelist()
+                    logger.info(f"EPUB contains {len(file_list)} files: {', '.join(file_list[:5])}{'...' if len(file_list) > 5 else ''}")
+            except zipfile.BadZipFile as e:
+                logger.error(f"EPUB file is not a valid ZIP archive: {str(e)}")
+                return jsonify({"error": f"Generated EPUB is corrupted: {str(e)}"}), 500
+            except Exception as e:
+                logger.error(f"Error verifying EPUB ZIP structure: {str(e)}")
+                # Continue anyway, as this is just a verification step
+            
+            # Copy the file to a more permanent location to avoid temp file issues
+            permanent_output_path = os.path.join(os.path.dirname(output_path), 'final_output.epub')
+            try:
+                import shutil
+                shutil.copy2(output_path, permanent_output_path)
+                logger.info(f"Copied EPUB to {permanent_output_path}")
+                
+                # Double check the copied file
+                if os.path.getsize(permanent_output_path) != os.path.getsize(output_path):
+                    logger.error("File size mismatch after copying")
+                    return jsonify({"error": "File corruption during copying"}), 500
+            except Exception as e:
+                logger.error(f"Error copying EPUB file: {str(e)}")
+                # Continue with the original file if copying fails
+                permanent_output_path = output_path
+            
             # Return the EPUB file
             logger.info("Sending EPUB file to client")
             try:
-                return send_file(
-                    output_path,
+                # Read the file into memory to avoid temp file issues
+                with open(permanent_output_path, 'rb') as f:
+                    file_data = f.read()
+                
+                from io import BytesIO
+                mem_file = BytesIO(file_data)
+                
+                # Send from memory instead of from disk
+                response = send_file(
+                    mem_file,
                     mimetype='application/epub+zip',
                     as_attachment=True,
                     download_name='book.epub'
                 )
+                
+                # Add headers to prevent caching issues
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+                
+                return response
             except Exception as e:
                 logger.error(f"Error sending file: {str(e)}")
                 return jsonify({"error": f"Error sending file: {str(e)}"}), 500
