@@ -35,10 +35,19 @@ def convert():
         return jsonify({"error": "Missing required field: markdown"}), 400
     
     markdown_content = data['markdown']
-    title = data.get('title', 'Untitled')
-    author = data.get('author', 'Unknown Author')
     
-    logger.info(f"Processing conversion request - Title: {title}, Author: {author}")
+    # Get title and author with validation
+    title = data.get('title', 'Untitled')
+    if not title or not isinstance(title, str):
+        logger.warning("Invalid or missing title, using default")
+        title = 'Untitled'
+    
+    author = data.get('author', 'Unknown Author')
+    if not author or not isinstance(author, str):
+        logger.warning("Invalid or missing author, using default")
+        author = 'Unknown Author'
+    
+    logger.info(f"Processing conversion request - Title: '{title}', Author: '{author}'")
     logger.debug(f"Markdown content length: {len(markdown_content)} characters")
     
     try:
@@ -63,11 +72,28 @@ def convert():
             output_path = os.path.join(temp_dir, 'output.epub')
             logger.debug(f"Output path set to {output_path}")
             
-            # Build pandoc command
+            # Create metadata file for better control
+            metadata_path = os.path.join(temp_dir, 'metadata.yaml')
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                f.write(f"""---
+title: "{title}"
+author: "{author}"
+date: "{os.environ.get('EPUB_DATE', '')}"
+language: "{os.environ.get('EPUB_LANGUAGE', 'en-US')}"
+rights: "{os.environ.get('EPUB_RIGHTS', '')}"
+publisher: "{os.environ.get('EPUB_PUBLISHER', '')}"
+---
+""")
+            logger.debug(f"Created metadata file at {metadata_path}")
+            
+            # Build pandoc command with metadata file
             cmd = [
                 'pandoc',
+                '--standalone',
+                '--metadata-file=' + metadata_path,
                 input_path,
                 '-o', output_path,
+                # Still include direct metadata for backwards compatibility
                 '--metadata', f'title={title}',
                 '--metadata', f'author={author}'
             ]
@@ -98,6 +124,33 @@ def convert():
             if output_size == 0:
                 logger.error("Output file has zero bytes")
                 return jsonify({"error": "Generated EPUB file is empty"}), 500
+                
+            # Verify metadata was included (basic check)
+            logger.info("Verifying metadata in EPUB file")
+            verify_cmd = [
+                'pandoc',
+                '--standalone',
+                output_path,
+                '-t', 'plain',
+                '--no-highlight'
+            ]
+            try:
+                verify_result = subprocess.run(verify_cmd, capture_output=True, text=True)
+                if verify_result.returncode == 0:
+                    content = verify_result.stdout.lower()
+                    if title.lower() in content:
+                        logger.info("Title verified in EPUB content")
+                    else:
+                        logger.warning(f"Title '{title}' not found in EPUB content")
+                    
+                    if author.lower() in content:
+                        logger.info("Author verified in EPUB content")
+                    else:
+                        logger.warning(f"Author '{author}' not found in EPUB content")
+                else:
+                    logger.warning("Could not verify metadata in EPUB file")
+            except Exception as e:
+                logger.warning(f"Error verifying metadata: {str(e)}")
             
             # Return the EPUB file
             logger.info("Sending EPUB file to client")

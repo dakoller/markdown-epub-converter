@@ -44,6 +44,19 @@ This document summarizes all the changes made to improve the security of the Doc
 ### 10. Security Labels
 - Added metadata labels to the image for better tracking and identification
 
+## Metadata Handling Improvements
+
+### 1. Enhanced Title and Author Handling
+- Added robust validation for title and author values
+- Created a dedicated metadata file for better control over EPUB metadata
+- Added verification step to check if metadata was properly included in the EPUB file
+- Added environment variables for additional metadata fields (language, date, rights, publisher)
+
+### 2. Metadata Verification
+- Added functionality to verify that title and author are properly set in the EPUB file
+- Implemented multiple methods to extract and check metadata from EPUB files
+- Added detailed logging of metadata verification results
+
 ## Debugging Enhancements for Zero Byte Output Issue
 
 ### 1. Enhanced Logging

@@ -9,6 +9,8 @@ import argparse
 import json
 import os
 import sys
+import subprocess
+import tempfile
 
 def test_health_check(base_url):
     """Test the health check endpoint."""
@@ -28,6 +30,93 @@ def test_health_check(base_url):
             return False
     except Exception as e:
         print(f"❌ Error connecting to server: {str(e)}")
+        return False
+
+def verify_epub_metadata(epub_file, expected_title, expected_author):
+    """Verify that the EPUB file contains the expected title and author."""
+    print(f"\n🔍 Verifying metadata in EPUB file: {epub_file}")
+    
+    if not os.path.exists(epub_file):
+        print(f"❌ EPUB file not found: {epub_file}")
+        return False
+    
+    if os.path.getsize(epub_file) == 0:
+        print(f"❌ EPUB file is empty: {epub_file}")
+        return False
+    
+    try:
+        # Create a temporary directory for extraction
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Use pandoc to convert EPUB to plain text for inspection
+            cmd = [
+                'pandoc',
+                '--standalone',
+                epub_file,
+                '-t', 'plain',
+                '--no-highlight',
+                '-o', os.path.join(temp_dir, 'content.txt')
+            ]
+            
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    print(f"❌ Failed to extract content from EPUB: {result.stderr}")
+                    return False
+                
+                # Read the extracted content
+                with open(os.path.join(temp_dir, 'content.txt'), 'r', encoding='utf-8') as f:
+                    content = f.read().lower()
+                
+                # Check for title and author
+                title_found = expected_title.lower() in content
+                author_found = expected_author.lower() in content
+                
+                if title_found:
+                    print(f"✅ Title found in EPUB: {expected_title}")
+                else:
+                    print(f"❌ Title not found in EPUB: {expected_title}")
+                
+                if author_found:
+                    print(f"✅ Author found in EPUB: {expected_author}")
+                else:
+                    print(f"❌ Author not found in EPUB: {expected_author}")
+                
+                return title_found and author_found
+                
+            except Exception as e:
+                print(f"❌ Error extracting content from EPUB: {str(e)}")
+                
+                # Fallback method: try to use strings command if available
+                try:
+                    strings_cmd = ['strings', epub_file]
+                    strings_result = subprocess.run(strings_cmd, capture_output=True, text=True)
+                    
+                    if strings_result.returncode == 0:
+                        content = strings_result.stdout.lower()
+                        
+                        title_found = expected_title.lower() in content
+                        author_found = expected_author.lower() in content
+                        
+                        if title_found:
+                            print(f"✅ Title found in EPUB (fallback method): {expected_title}")
+                        else:
+                            print(f"❌ Title not found in EPUB (fallback method): {expected_title}")
+                        
+                        if author_found:
+                            print(f"✅ Author found in EPUB (fallback method): {expected_author}")
+                        else:
+                            print(f"❌ Author not found in EPUB (fallback method): {expected_author}")
+                        
+                        return title_found and author_found
+                    
+                except Exception:
+                    pass
+                
+                return False
+    
+    except Exception as e:
+        print(f"❌ Error verifying EPUB metadata: {str(e)}")
         return False
 
 def test_conversion(base_url, markdown_content, title="Test Title", author="Test Author", output_file="test_output.epub"):
@@ -71,6 +160,12 @@ def test_conversion(base_url, markdown_content, title="Test Title", author="Test
             if file_size == 0:
                 print("❌ Warning: Output file has zero bytes!")
                 return False
+            
+            # Verify metadata
+            metadata_ok = verify_epub_metadata(output_file, title, author)
+            if not metadata_ok:
+                print("⚠️ Warning: Metadata verification failed or incomplete")
+                # Don't fail the test completely, just warn
             
             return True
         
@@ -136,6 +231,8 @@ print("Hello, World!")
     print("\n📋 Test Summary:")
     print(f"Health Check: {'✅ Passed' if health_ok else '❌ Failed'}")
     print(f"Conversion: {'✅ Passed' if conversion_ok else '❌ Failed'}")
+    print(f"Title: {args.title}")
+    print(f"Author: {args.author}")
     
     if not (health_ok and conversion_ok):
         print("\n⚠️ Some tests failed. Check the logs for details.")
