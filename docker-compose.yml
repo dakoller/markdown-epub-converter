@@ -20,6 +20,7 @@ services:
       - ./app.py:/app/app.py  # For development
       - ./test_api.py:/app/test_api.py  # Include test script
       - ./test_output:/app/test_output  # Mount a volume for test outputs
+      - ./openapi.yaml:/app/openapi.yaml  # Mount OpenAPI specification
     restart: unless-stopped
     # Add resource limits
     deploy:

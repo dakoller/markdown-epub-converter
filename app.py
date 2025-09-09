@@ -25,7 +25,20 @@ def health_check():
 def openapi_spec():
     """Serve the OpenAPI specification file."""
     logger.info("OpenAPI specification endpoint called")
-    return send_file('openapi.yaml', mimetype='text/yaml')
+    try:
+        # Try to find the file in the current directory
+        if os.path.exists('openapi.yaml'):
+            return send_file('openapi.yaml', mimetype='text/yaml')
+        # Try to find the file in the /app directory (for Docker)
+        elif os.path.exists('/app/openapi.yaml'):
+            return send_file('/app/openapi.yaml', mimetype='text/yaml')
+        # If the file doesn't exist, return an error
+        else:
+            logger.error("OpenAPI specification file not found")
+            return jsonify({"error": "OpenAPI specification file not found"}), 404
+    except Exception as e:
+        logger.error(f"Error serving OpenAPI specification: {str(e)}")
+        return jsonify({"error": f"Error serving OpenAPI specification: {str(e)}"}), 500
 
 @app.route('/convert', methods=['POST'])
 def convert():
