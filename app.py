@@ -85,8 +85,20 @@ def convert():
             logger.debug(f"Created temporary directory: {temp_dir}")
             
             # Create input markdown file
-            # Ensure proper line breaks by normalizing newlines
+            # Ensure proper line breaks by normalizing newlines and adding extra newlines for headers
             normalized_content = markdown_content.replace('\r\n', '\n').replace('\r', '\n')
+            
+            # Ensure double newlines are preserved and properly interpreted
+            # Replace literal "\n\n" with actual double newlines
+            normalized_content = normalized_content.replace('\\n\\n', '\n\n')
+            
+            # Add extra newlines before headers to ensure proper separation
+            import re
+            normalized_content = re.sub(r'(\n)#', r'\n\n#', normalized_content)
+            normalized_content = re.sub(r'(\n)(\*|\-|\+)(\s)', r'\n\n\2\3', normalized_content)
+            
+            # Ensure paragraphs are properly separated
+            normalized_content = re.sub(r'\n\n+', '\n\n', normalized_content)
             
             input_path = os.path.join(temp_dir, 'input.md')
             with open(input_path, 'w', encoding='utf-8') as f:
@@ -127,10 +139,14 @@ publisher: "{os.environ.get('EPUB_PUBLISHER', '')}"
                 '-o', output_path,
                 # Explicitly specify EPUB format
                 '-t', 'epub3',
-                # Add markdown reader option to ensure proper interpretation
-                '-f', 'markdown',
+                # Add markdown reader option with extensions for proper interpretation
+                '-f', 'markdown+smart+autolink_bare_uris+inline_notes+pipe_tables+line_blocks+escaped_line_breaks+hard_line_breaks+raw_html+native_divs+native_spans',
                 # Add options for better rendering
                 '--toc',  # Add table of contents
+                '--toc-depth=3',  # Include headings up to level 3 in TOC
+                '--wrap=none',  # Don't wrap lines
+                '--preserve-tabs',  # Preserve tabs
+                '--shift-heading-level-by=0',  # Don't shift heading levels
                 # Still include direct metadata for backwards compatibility
                 '--metadata', f'title={title}',
                 '--metadata', f'author={author}'

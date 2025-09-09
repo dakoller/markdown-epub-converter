@@ -244,10 +244,10 @@ def test_conversion(base_url, markdown_content, title="Test Title", author="Test
 def main():
     parser = argparse.ArgumentParser(description='Test the Markdown to EPUB converter API')
     parser.add_argument('--url', default='http://localhost:5000', help='Base URL of the API')
-    parser.add_argument('--input', help='Path to markdown file for testing')
+    parser.add_argument('--input', default='testfile.md', help='Path to markdown file for testing')
     parser.add_argument('--output', default='test_output.epub', help='Output EPUB file path')
-    parser.add_argument('--title', default='Test Title', help='Title for the EPUB')
-    parser.add_argument('--author', default='Test Author', help='Author for the EPUB')
+    parser.add_argument('--title', default='Should we revisit Extreme Programming in the age of AI?', help='Title for the EPUB')
+    parser.add_argument('--author', default='Jacob Clark', help='Author for the EPUB')
     
     args = parser.parse_args()
     
@@ -264,22 +264,7 @@ def main():
             sys.exit(1)
     else:
         # Use a simple markdown sample if no input file is provided
-        markdown_content = """# Sample Markdown
-
-This is a test document to verify the Markdown to EPUB conversion.
-
-## Features
-
-- Lists
-- **Bold text**
-- *Italic text*
-
-> Blockquotes are also supported.
-
-```python
-# And code blocks
-print("Hello, World!")
-```
+        markdown_content = """Should we revisit Extreme Programming in the age of AI?
 """
     
     conversion_ok = test_conversion(
