@@ -111,6 +111,11 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
         code {
             background-color: #f8f9fa;
             padding: 2px 4px;
@@ -216,20 +221,31 @@ curl -X POST http://localhost:8088/convert \
                 // Show loading status
                 showStatus('Converting your Markdown to EPUB...', 'info');
                 
-                // In a real implementation, this would make an AJAX request to the API
-                // For now, we'll just redirect to download the file
-                fetch('/convert', {
+                // Make an AJAX request to the API
+                // Use the full URL to avoid CORS issues
+                const apiUrl = window.location.origin + '/convert';
+                console.log('Sending request to:', apiUrl);
+                
+                fetch(apiUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/epub+zip'
                     },
                     body: JSON.stringify(data)
                 })
                 .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    
                     if (!response.ok) {
-                        return response.json().then(err => {
-                            throw new Error(err.error || 'Conversion failed');
-                        });
+                        if (response.headers.get('Content-Type')?.includes('application/json')) {
+                            return response.json().then(err => {
+                                throw new Error(err.error || 'Conversion failed');
+                            });
+                        } else {
+                            throw new Error('Conversion failed: ' + response.statusText);
+                        }
                     }
                     return response.blob();
                 })
@@ -248,7 +264,7 @@ curl -X POST http://localhost:8088/convert \
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showStatus(`Error: ${error.message}`, 'error');
+                    showStatus(`Error: ${error.message}. Check browser console for details.`, 'error');
                 });
             });
             

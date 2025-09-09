@@ -85,9 +85,12 @@ def convert():
             logger.debug(f"Created temporary directory: {temp_dir}")
             
             # Create input markdown file
+            # Ensure proper line breaks by normalizing newlines
+            normalized_content = markdown_content.replace('\r\n', '\n').replace('\r', '\n')
+            
             input_path = os.path.join(temp_dir, 'input.md')
             with open(input_path, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
+                f.write(normalized_content)
             
             # Verify input file was created correctly
             if not os.path.exists(input_path):
@@ -124,6 +127,10 @@ publisher: "{os.environ.get('EPUB_PUBLISHER', '')}"
                 '-o', output_path,
                 # Explicitly specify EPUB format
                 '-t', 'epub3',
+                # Add markdown reader option to ensure proper interpretation
+                '-f', 'markdown',
+                # Add options for better rendering
+                '--toc',  # Add table of contents
                 # Still include direct metadata for backwards compatibility
                 '--metadata', f'title={title}',
                 '--metadata', f'author={author}'
