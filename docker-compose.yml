@@ -17,7 +17,7 @@ services:
       - EPUB_RIGHTS=All rights reserved
       - EPUB_PUBLISHER=Markdown to EPUB Converter
       # Authentication (uncomment and set a secure token to enable authentication)
-      - AUTH_TOKEN=test_token_123
+      #- AUTH_TOKEN=test_token_123
     volumes:
       - ./app.py:/app/app.py  # For development
       - ./test_api.py:/app/test_api.py  # Include test script
