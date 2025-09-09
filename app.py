@@ -23,8 +23,8 @@ def auth_required(f):
     """Decorator to check if authentication is required and validate token if needed."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        # If no auth token is configured, skip authentication
-        if not AUTH_TOKEN:
+        # If no auth token is configured or it's empty, skip authentication
+        if not AUTH_TOKEN or AUTH_TOKEN.strip() == '':
             return f(*args, **kwargs)
         
         # Check for token in headers
@@ -55,7 +55,7 @@ def health_check():
 def auth_status():
     """Endpoint to check if authentication is required."""
     logger.info("Auth status endpoint called")
-    if AUTH_TOKEN:
+    if AUTH_TOKEN and AUTH_TOKEN.strip() != '':
         return jsonify({"auth_required": True}), 200
     else:
         return jsonify({"auth_required": False}), 200
