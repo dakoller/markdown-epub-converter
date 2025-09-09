@@ -148,6 +148,10 @@
                     <label for="author">Author:</label>
                     <input type="text" id="author" name="author" placeholder="Author Name">
                 </div>
+                <div class="form-group" id="auth-token-group" style="display: none;">
+                    <label for="auth-token">Authentication Token:</label>
+                    <input type="password" id="auth-token" name="auth-token" placeholder="Enter your authentication token">
+                </div>
                 <div class="form-group">
                     <label for="markdown">Markdown Content:</label>
                     <textarea id="markdown" name="markdown" placeholder="# Chapter 1&#10;&#10;This is the content of chapter 1."></textarea>
@@ -155,6 +159,11 @@
                 <button type="submit">Convert to EPUB</button>
             </form>
             <div id="status" class="status"></div>
+            <div id="auth-warning" class="status error" style="display: none;">
+                <strong>⚠️ Warning:</strong> Authentication is not enabled for this server. 
+                Anyone with access to this URL can use this tool. 
+                To enable authentication, set the AUTH_TOKEN environment variable in docker-compose.yml.
+            </div>
         </div>
 
         <div class="api-docs">
@@ -197,6 +206,38 @@ curl -X POST http://localhost:8088/convert \
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('convert-form');
             const statusDiv = document.getElementById('status');
+            const authTokenGroup = document.getElementById('auth-token-group');
+            
+            // Check if authentication is required
+            checkAuthStatus();
+            
+            // Function to check if authentication is required
+            function checkAuthStatus() {
+                fetch(window.location.origin + '/auth-status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.auth_required) {
+                            // Show auth token field if authentication is required
+                            authTokenGroup.style.display = 'block';
+                            console.log('Authentication is required for this server');
+                            
+                            // Hide warning message if authentication is required
+                            document.getElementById('auth-warning').style.display = 'none';
+                        } else {
+                            // Hide auth token field if authentication is not required
+                            authTokenGroup.style.display = 'none';
+                            console.log('Authentication is not required for this server');
+                            
+                            // Show warning message if authentication is not required
+                            document.getElementById('auth-warning').style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking auth status:', error);
+                        // Default to showing auth token field if we can't determine status
+                        authTokenGroup.style.display = 'block';
+                    });
+            }
             
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -226,12 +267,22 @@ curl -X POST http://localhost:8088/convert \
                 const apiUrl = window.location.origin + '/convert';
                 console.log('Sending request to:', apiUrl);
                 
+                // Prepare headers
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/epub+zip'
+                };
+                
+                // Add auth token if provided
+                const authToken = document.getElementById('auth-token').value;
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                    console.log('Adding authentication token to request');
+                }
+                
                 fetch(apiUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/epub+zip'
-                    },
+                    headers: headers,
                     body: JSON.stringify(data)
                 })
                 .then(response => {
@@ -239,7 +290,9 @@ curl -X POST http://localhost:8088/convert \
                     console.log('Response headers:', response.headers);
                     
                     if (!response.ok) {
-                        if (response.headers.get('Content-Type')?.includes('application/json')) {
+                        if (response.status === 401) {
+                            throw new Error('Authentication failed. Please check your token and try again.');
+                        } else if (response.headers.get('Content-Type')?.includes('application/json')) {
                             return response.json().then(err => {
                                 throw new Error(err.error || 'Conversion failed');
                             });

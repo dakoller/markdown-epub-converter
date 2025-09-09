@@ -4,6 +4,16 @@ info:
   description: |
     A REST API for converting Markdown content to EPUB format using Pandoc.
     This service allows you to convert Markdown documents to EPUB format with customizable metadata.
+    
+    ## Authentication
+    
+    This API supports optional authentication using a Bearer token. If the `AUTH_TOKEN` environment 
+    variable is set in the server configuration, all requests to the `/convert` endpoint will require 
+    authentication. If no token is configured, the API will work without authentication.
+    
+    To authenticate, include one of the following headers in your request:
+    - `Authorization: Bearer your_token_here`
+    - `X-Auth-Token: your_token_here`
   version: 1.0.0
   contact:
     name: Markdown to EPUB Converter Team
@@ -61,6 +71,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+                
+  /auth-status:
+    get:
+      summary: Authentication status endpoint
+      description: Returns whether authentication is required for this server
+      operationId: authStatus
+      tags:
+        - health
+      responses:
+        '200':
+          description: Authentication status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auth_required:
+                    type: boolean
+                    description: Whether authentication is required
+                    example: true
 
   /convert:
     post:
@@ -68,9 +98,14 @@ paths:
       description: |
         Converts Markdown content to EPUB format with optional metadata.
         The response is a binary EPUB file that can be saved or displayed.
+        
+        If authentication is enabled on the server, this endpoint requires a valid token.
       operationId: convertMarkdownToEpub
       tags:
         - conversion
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
       requestBody:
         description: Markdown content and metadata for conversion
         required: true
@@ -110,6 +145,17 @@ paths:
                   summary: Invalid title field
                   value:
                     error: Invalid or missing title, using default
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                authRequired:
+                  summary: Authentication required
+                  value:
+                    error: Authentication required
         '500':
           description: Server error during conversion
           content:
@@ -142,6 +188,17 @@ paths:
                 type: string
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: string
+      description: Bearer authentication token
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Auth-Token
+      description: API key authentication (alternative to Bearer token)
   schemas:
     ConversionRequest:
       type: object

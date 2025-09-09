@@ -34,6 +34,31 @@ def test_health_check(base_url):
         print(f"❌ Error connecting to server: {str(e)}")
         return False
 
+def test_auth_status(base_url):
+    """Test the authentication status endpoint."""
+    url = f"{base_url}/auth-status"
+    print(f"\n🔍 Testing authentication status endpoint: {url}")
+    
+    try:
+        response = requests.get(url)
+        print(f"Status code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            auth_required = data.get('auth_required', False)
+            if auth_required:
+                print("✅ Authentication is required for this server")
+            else:
+                print("✅ Authentication is not required for this server")
+            return auth_required
+        else:
+            print("❌ Authentication status check failed")
+            return False
+    except Exception as e:
+        print(f"❌ Error checking authentication status: {str(e)}")
+        return False
+
 def verify_epub_structure(epub_file):
     """Verify that the EPUB file is a valid ZIP archive with the expected structure."""
     print(f"\n🔍 Verifying EPUB file structure: {epub_file}")
@@ -176,7 +201,7 @@ def verify_epub_metadata(epub_file, expected_title, expected_author):
         print(f"❌ Error verifying EPUB metadata: {str(e)}")
         return False
 
-def test_conversion(base_url, markdown_content, title="Test Title", author="Test Author", output_file="test_output.epub"):
+def test_conversion(base_url, markdown_content, title="Test Title", author="Test Author", output_file="test_output.epub", auth_token=None):
     """Test the conversion endpoint with the provided markdown content."""
     url = f"{base_url}/convert"
     print(f"\n🔍 Testing conversion endpoint: {url}")
@@ -192,9 +217,20 @@ def test_conversion(base_url, markdown_content, title="Test Title", author="Test
     print(f"  - Author: {author}")
     print(f"  - Markdown content length: {len(markdown_content)} characters")
     
+    # Prepare headers
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/epub+zip'
+    }
+    
+    # Add auth token if provided
+    if auth_token:
+        headers['Authorization'] = f"Bearer {auth_token}"
+        print(f"  - Using authentication token: {auth_token[:3]}{'*' * (len(auth_token) - 6)}{auth_token[-3:] if len(auth_token) > 6 else ''}")
+    
     try:
         # Send the request with a longer timeout
-        response = requests.post(url, json=payload, timeout=30)
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
         
         print(f"Status code: {response.status_code}")
         
@@ -248,11 +284,15 @@ def main():
     parser.add_argument('--output', default='test_output.epub', help='Output EPUB file path')
     parser.add_argument('--title', default='Should we revisit Extreme Programming in the age of AI?', help='Title for the EPUB')
     parser.add_argument('--author', default='Jacob Clark', help='Author for the EPUB')
+    parser.add_argument('--token', help='Authentication token for the API (if required)')
     
     args = parser.parse_args()
     
     # Test health check
     health_ok = test_health_check(args.url)
+    
+    # Test authentication status
+    auth_required = test_auth_status(args.url)
     
     # Test conversion
     if args.input:
@@ -272,15 +312,19 @@ def main():
         markdown_content, 
         args.title, 
         args.author, 
-        args.output
+        args.output,
+        args.token
     )
     
     # Print summary
     print("\n📋 Test Summary:")
     print(f"Health Check: {'✅ Passed' if health_ok else '❌ Failed'}")
+    print(f"Auth Status: {'🔒 Required' if auth_required else '🔓 Not Required'}")
     print(f"Conversion: {'✅ Passed' if conversion_ok else '❌ Failed'}")
     print(f"Title: {args.title}")
     print(f"Author: {args.author}")
+    if args.token:
+        print(f"Auth Token: {args.token[:3]}{'*' * (len(args.token) - 6)}{args.token[-3:] if len(args.token) > 6 else ''}")
     
     if not (health_ok and conversion_ok):
         print("\n⚠️ Some tests failed. Check the logs for details.")

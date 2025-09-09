@@ -4,6 +4,7 @@ import subprocess
 import logging
 import sys
 from flask import Flask, request, send_file, jsonify, send_from_directory
+from functools import wraps
 
 # Configure logging
 logging.basicConfig(
@@ -15,11 +16,49 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Get auth token from environment variable
+AUTH_TOKEN = os.environ.get('AUTH_TOKEN', '')
+
+def auth_required(f):
+    """Decorator to check if authentication is required and validate token if needed."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # If no auth token is configured, skip authentication
+        if not AUTH_TOKEN:
+            return f(*args, **kwargs)
+        
+        # Check for token in headers
+        token = None
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        
+        # Also check for token in X-Auth-Token header (alternative)
+        if not token:
+            token = request.headers.get('X-Auth-Token')
+        
+        # Check if token matches
+        if not token or token != AUTH_TOKEN:
+            logger.warning(f"Authentication failed: Invalid or missing token")
+            return jsonify({"error": "Authentication required"}), 401
+            
+        return f(*args, **kwargs)
+    return decorated
+
 @app.route('/status', methods=['GET'])
 def health_check():
     """Health check endpoint for container health monitoring."""
     logger.info("Health check endpoint called")
     return jsonify({"status": "healthy"}), 200
+
+@app.route('/auth-status', methods=['GET'])
+def auth_status():
+    """Endpoint to check if authentication is required."""
+    logger.info("Auth status endpoint called")
+    if AUTH_TOKEN:
+        return jsonify({"auth_required": True}), 200
+    else:
+        return jsonify({"auth_required": False}), 200
 
 @app.route('/', methods=['GET'])
 def index():
@@ -51,6 +90,7 @@ def openapi_spec():
         return jsonify({"error": f"Error serving OpenAPI specification: {str(e)}"}), 500
 
 @app.route('/convert', methods=['POST'])
+@auth_required
 def convert():
     logger.info("Convert endpoint called")
     
