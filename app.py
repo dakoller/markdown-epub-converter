@@ -123,9 +123,7 @@ publisher: "{os.environ.get('EPUB_PUBLISHER', '')}"
                 input_path,
                 '-o', output_path,
                 # Explicitly specify EPUB format
-                '-t', 'epub',
-                # Add EPUB version
-                '--epub-version=3',
+                '-t', 'epub3',
                 # Still include direct metadata for backwards compatibility
                 '--metadata', f'title={title}',
                 '--metadata', f'author={author}'
