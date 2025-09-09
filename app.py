@@ -3,7 +3,7 @@ import tempfile
 import subprocess
 import logging
 import sys
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, send_from_directory
 
 # Configure logging
 logging.basicConfig(
@@ -20,6 +20,12 @@ def health_check():
     """Health check endpoint for container health monitoring."""
     logger.info("Health check endpoint called")
     return jsonify({"status": "healthy"}), 200
+
+@app.route('/openapi.yaml', methods=['GET'])
+def openapi_spec():
+    """Serve the OpenAPI specification file."""
+    logger.info("OpenAPI specification endpoint called")
+    return send_file('openapi.yaml', mimetype='text/yaml')
 
 @app.route('/convert', methods=['POST'])
 def convert():

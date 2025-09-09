@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: Markdown to EPUB Converter API
+  description: |
+    A REST API for converting Markdown content to EPUB format using Pandoc.
+    This service allows you to convert Markdown documents to EPUB format with customizable metadata.
+  version: 1.0.0
+  contact:
+    name: Markdown to EPUB Converter Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8088
+    description: Local development server
+
+paths:
+  /:
+    get:
+      summary: Health check endpoint
+      description: Returns a health status to verify the API is running
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+        '500':
+          description: API is not healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /convert:
+    post:
+      summary: Convert Markdown to EPUB
+      description: |
+        Converts Markdown content to EPUB format with optional metadata.
+        The response is a binary EPUB file that can be saved or displayed.
+      operationId: convertMarkdownToEpub
+      requestBody:
+        description: Markdown content and metadata for conversion
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversionRequest'
+      responses:
+        '200':
+          description: Successful conversion
+          content:
+            application/epub+zip:
+              schema:
+                type: string
+                format: binary
+              examples:
+                epub:
+                  summary: EPUB file
+                  value: Binary EPUB file content
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="book.epub"
+        '400':
+          description: Bad request - missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingMarkdown:
+                  summary: Missing markdown field
+                  value:
+                    error: Missing required field: markdown
+                invalidTitle:
+                  summary: Invalid title field
+                  value:
+                    error: Invalid or missing title, using default
+        '500':
+          description: Server error during conversion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                conversionFailed:
+                  summary: Conversion failed
+                  value:
+                    error: Conversion failed - pandoc exited with status 1
+                emptyOutput:
+                  summary: Empty output file
+                  value:
+                    error: Generated EPUB file is empty
+
+  /openapi.yaml:
+    get:
+      summary: OpenAPI Specification
+      description: Returns the OpenAPI specification for this API
+      operationId: getOpenApiSpec
+      responses:
+        '200':
+          description: OpenAPI specification in YAML format
+          content:
+            text/yaml:
+              schema:
+                type: string
+
+components:
+  schemas:
+    ConversionRequest:
+      type: object
+      required:
+        - markdown
+      properties:
+        markdown:
+          type: string
+          description: The markdown content to convert to EPUB
+          example: "# Chapter 1\n\nThis is the content of chapter 1."
+        title:
+          type: string
+          description: The title of the EPUB document
+          default: Untitled
+          example: My Book Title
+        author:
+          type: string
+          description: The author of the EPUB document
+          default: Unknown Author
+          example: John Doe
+      example:
+        markdown: "# My Book\n\nThis is the content of my book."
+        title: My Book Title
+        author: John Doe
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Conversion failed - pandoc exited with status 1
+
+tags:
+  - name: conversion
+    description: Markdown to EPUB conversion operations
+  - name: health
+    description: Health check operations
+  - name: documentation
+    description: API documentation operations
