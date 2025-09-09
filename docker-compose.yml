@@ -21,6 +21,7 @@ services:
       - ./test_api.py:/app/test_api.py  # Include test script
       - ./test_output:/app/test_output  # Mount a volume for test outputs
       - ./openapi.yaml:/app/openapi.yaml  # Mount OpenAPI specification
+      - ./index.html:/app/index.html  # Mount index.html for web interface
     restart: unless-stopped
     # Add resource limits
     deploy:
@@ -31,7 +32,7 @@ services:
           memory: 128M
     # Add healthcheck
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/status"]
       interval: 30s
       timeout: 10s
       retries: 3

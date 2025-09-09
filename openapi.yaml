@@ -18,9 +18,32 @@ servers:
 paths:
   /:
     get:
+      summary: Index page
+      description: Returns the HTML index page with a web interface for the API
+      operationId: getIndexPage
+      tags:
+        - ui
+      responses:
+        '200':
+          description: HTML index page
+          content:
+            text/html:
+              schema:
+                type: string
+        '500':
+          description: Error loading index page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /status:
+    get:
       summary: Health check endpoint
       description: Returns a health status to verify the API is running
       operationId: healthCheck
+      tags:
+        - health
       responses:
         '200':
           description: API is healthy
@@ -46,6 +69,8 @@ paths:
         Converts Markdown content to EPUB format with optional metadata.
         The response is a binary EPUB file that can be saved or displayed.
       operationId: convertMarkdownToEpub
+      tags:
+        - conversion
       requestBody:
         description: Markdown content and metadata for conversion
         required: true
@@ -106,6 +131,8 @@ paths:
       summary: OpenAPI Specification
       description: Returns the OpenAPI specification for this API
       operationId: getOpenApiSpec
+      tags:
+        - documentation
       responses:
         '200':
           description: OpenAPI specification in YAML format
@@ -157,3 +184,5 @@ tags:
     description: Health check operations
   - name: documentation
     description: API documentation operations
+  - name: ui
+    description: User interface operations

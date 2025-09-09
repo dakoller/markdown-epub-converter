@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown to EPUB Converter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 30px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .converter-form {
+            flex: 1;
+            min-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .api-docs {
+            flex: 1;
+            min-width: 300px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .api-link {
+            display: inline-block;
+            margin: 10px 0;
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+        }
+        .api-link:hover {
+            background-color: #e9ecef;
+        }
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #7f8c8d;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Markdown to EPUB Converter</h1>
+        <p>A simple web service to convert Markdown content to EPUB format</p>
+    </header>
+
+    <div class="container">
+        <div class="converter-form">
+            <h2>Convert Markdown to EPUB</h2>
+            <form id="convert-form">
+                <div class="form-group">
+                    <label for="title">Book Title:</label>
+                    <input type="text" id="title" name="title" placeholder="My Book Title">
+                </div>
+                <div class="form-group">
+                    <label for="author">Author:</label>
+                    <input type="text" id="author" name="author" placeholder="Author Name">
+                </div>
+                <div class="form-group">
+                    <label for="markdown">Markdown Content:</label>
+                    <textarea id="markdown" name="markdown" placeholder="# Chapter 1&#10;&#10;This is the content of chapter 1."></textarea>
+                </div>
+                <button type="submit">Convert to EPUB</button>
+            </form>
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="api-docs">
+            <h2>API Documentation</h2>
+            <p>This service provides a REST API for converting Markdown to EPUB format.</p>
+            
+            <h3>API Endpoints</h3>
+            <ul>
+                <li><code>POST /convert</code> - Convert Markdown to EPUB</li>
+                <li><code>GET /status</code> - Check API health status</li>
+                <li><code>GET /openapi.yaml</code> - OpenAPI specification</li>
+            </ul>
+            
+            <h3>API Resources</h3>
+            <p>
+                <a href="/openapi.yaml" class="api-link">OpenAPI Specification</a>
+                <a href="/status" class="api-link">API Status</a>
+            </p>
+            
+            <h3>Example Usage</h3>
+            <pre>
+curl -X POST http://localhost:8088/convert \
+  -H "Content-Type: application/json" \
+  -d '{
+    "markdown": "# My Book\n\nThis is chapter one...",
+    "title": "My First Book",
+    "author": "John Doe"
+  }' \
+  --output book.epub</pre>
+        </div>
+    </div>
+
+    <footer>
+        <p>Markdown to EPUB Converter &copy; 2025 | <a href="https://github.com/yourusername/markdown-epub-converter">GitHub</a></p>
+    </footer>
+
+    <script>
+        // This script will be implemented to handle the form submission
+        // and convert Markdown to EPUB using the API
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('convert-form');
+            const statusDiv = document.getElementById('status');
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form values
+                const title = document.getElementById('title').value || 'Untitled';
+                const author = document.getElementById('author').value || 'Unknown Author';
+                const markdown = document.getElementById('markdown').value;
+                
+                if (!markdown) {
+                    showStatus('Please enter some Markdown content.', 'error');
+                    return;
+                }
+                
+                // Prepare the request data
+                const data = {
+                    markdown: markdown,
+                    title: title,
+                    author: author
+                };
+                
+                // Show loading status
+                showStatus('Converting your Markdown to EPUB...', 'info');
+                
+                // In a real implementation, this would make an AJAX request to the API
+                // For now, we'll just redirect to download the file
+                fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || 'Conversion failed');
+                        });
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create a download link for the EPUB file
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.epub`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    showStatus('Conversion successful! Your EPUB file is downloading.', 'success');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showStatus(`Error: ${error.message}`, 'error');
+                });
+            });
+            
+            function showStatus(message, type) {
+                statusDiv.textContent = message;
+                statusDiv.className = 'status';
+                statusDiv.classList.add(type);
+                statusDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

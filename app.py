@@ -15,11 +15,21 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-@app.route('/', methods=['GET'])
+@app.route('/status', methods=['GET'])
 def health_check():
     """Health check endpoint for container health monitoring."""
     logger.info("Health check endpoint called")
     return jsonify({"status": "healthy"}), 200
+
+@app.route('/', methods=['GET'])
+def index():
+    """Serve the index.html file."""
+    logger.info("Index page requested")
+    try:
+        return send_file('index.html')
+    except Exception as e:
+        logger.error(f"Error serving index.html: {str(e)}")
+        return jsonify({"error": "Could not load index page"}), 500
 
 @app.route('/openapi.yaml', methods=['GET'])
 def openapi_spec():

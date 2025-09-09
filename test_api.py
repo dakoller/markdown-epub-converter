@@ -16,7 +16,7 @@ from io import BytesIO
 
 def test_health_check(base_url):
     """Test the health check endpoint."""
-    url = f"{base_url}/"
+    url = f"{base_url}/status"
     print(f"\n🔍 Testing health check endpoint: {url}")
     
     try:
