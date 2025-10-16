@@ -156,19 +156,51 @@ def convert():
             output_path = os.path.join(temp_dir, 'output.epub')
             logger.debug(f"Output path set to {output_path}")
             
-            # Create metadata file for better control
+            # Create metadata file for better control using PyYAML for proper escaping
+            import yaml
             metadata_path = os.path.join(temp_dir, 'metadata.yaml')
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                f.write(f"""---
-title: "{title}"
-author: "{author}"
-date: "{os.environ.get('EPUB_DATE', '')}"
-language: "{os.environ.get('EPUB_LANGUAGE', 'en-US')}"
-rights: "{os.environ.get('EPUB_RIGHTS', '')}"
-publisher: "{os.environ.get('EPUB_PUBLISHER', '')}"
----
-""")
-            logger.debug(f"Created metadata file at {metadata_path}")
+            
+            # Prepare metadata as a dictionary
+            metadata = {
+                'title': title,
+                'author': author,
+                'date': os.environ.get('EPUB_DATE', ''),
+                'language': os.environ.get('EPUB_LANGUAGE', 'en-US'),
+                'rights': os.environ.get('EPUB_RIGHTS', ''),
+                'publisher': os.environ.get('EPUB_PUBLISHER', '')
+            }
+            
+            # Filter out empty values
+            metadata = {k: v for k, v in metadata.items() if v}
+            
+            try:
+                # Write metadata using PyYAML for proper YAML formatting
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    f.write('---\n')
+                    yaml.dump(metadata, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+                    f.write('---\n')
+                logger.debug(f"Created metadata file at {metadata_path}")
+            except Exception as yaml_error:
+                logger.error(f"Error creating YAML metadata: {str(yaml_error)}")
+                # Fallback to simple metadata handling with manual escaping
+                logger.warning("Falling back to basic metadata handling")
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    # Escape any quotes in the values
+                    safe_title = title.replace('"', '\\"') if title else ""
+                    safe_author = author.replace('"', '\\"') if author else ""
+                    
+                    f.write('---\n')
+                    f.write(f'title: "{safe_title}"\n')
+                    f.write(f'author: "{safe_author}"\n')
+                    if os.environ.get('EPUB_DATE', ''):
+                        f.write(f'date: "{os.environ.get("EPUB_DATE", "")}"\n')
+                    f.write(f'language: "{os.environ.get("EPUB_LANGUAGE", "en-US")}"\n')
+                    if os.environ.get('EPUB_RIGHTS', ''):
+                        f.write(f'rights: "{os.environ.get("EPUB_RIGHTS", "")}"\n')
+                    if os.environ.get('EPUB_PUBLISHER', ''):
+                        f.write(f'publisher: "{os.environ.get("EPUB_PUBLISHER", "")}"\n')
+                    f.write('---\n')
+                logger.debug(f"Created basic metadata file at {metadata_path}")
             
             # Build pandoc command with metadata file and explicit EPUB format
             cmd = [
