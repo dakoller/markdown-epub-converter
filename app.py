@@ -105,6 +105,11 @@ def convert():
     
     markdown_content = data['markdown']
     
+    # Check if markdown_content is empty, None, or invalid
+    if markdown_content is None or not isinstance(markdown_content, str) or not markdown_content.strip():
+        logger.warning("Empty or invalid markdown content provided, using default message")
+        markdown_content = "# No Input Given\n\nNo markdown content was provided for conversion."
+    
     # Get title and author with validation
     title = data.get('title', 'Untitled')
     if not title or not isinstance(title, str):
